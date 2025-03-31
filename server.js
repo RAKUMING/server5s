@@ -17,12 +17,16 @@ db.run(`
     )
 `);
 
-// Obtener precio BTC/USDT desde CoinGecko
+// Obtener precio BTC/USDT desde CoinGecko (sin API Key)
 async function getBtcPrice() {
     try {
-        // Usando la API de CoinGecko para obtener el precio de Bitcoin en USD
-        const response = await axios.get("https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd");
-        return response.data.bitcoin.usd;
+        const response = await axios.get("https://api.coingecko.com/api/v3/simple/price", {
+            params: {
+                ids: "bitcoin",
+                vs_currencies: "usd"
+            }
+        });
+        return response.data.bitcoin.usd;  // Precio de BTC en USD
     } catch (error) {
         console.error("❌ Error obteniendo precio:", error.message);
         return null;
@@ -39,8 +43,9 @@ async function generateCandle() {
     let closePrice = openPrice;
     const startTime = new Date().toISOString();
 
+    // Esperar 5 segundos para capturar las fluctuaciones del precio
     for (let i = 0; i < 5; i++) {
-        await new Promise(resolve => setTimeout(resolve, 1000));
+        await new Promise(resolve => setTimeout(resolve, 1000));  // Espera 1 segundo entre cada captura
         const price = await getBtcPrice();
         if (price) {
             highPrice = Math.max(highPrice, price);
@@ -49,13 +54,14 @@ async function generateCandle() {
         }
     }
 
+    // Guardar la vela en la base de datos
     db.run("INSERT INTO candles (timestamp, open, high, low, close) VALUES (?, ?, ?, ?, ?)",
         [startTime, openPrice, highPrice, lowPrice, closePrice]);
 
     console.log(`📊 Vela guardada: ${startTime} - Open: ${openPrice}, Close: ${closePrice}`);
 }
 
-// Iniciar la captura de datos
+// Iniciar la captura de datos de velas cada 5 segundos
 setInterval(generateCandle, 5000);
 
 // Ruta para descargar historial de velas
@@ -67,5 +73,7 @@ app.get("/historical", (req, res) => {
 });
 
 // Iniciar el servidor
-const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => console.log(`🚀 Servidor corriendo en http://localhost:${PORT}`));
+const PORT = process.env.PORT || 8080;
+app.listen(PORT, () => {
+    console.log(`🚀 Servidor corriendo en http://localhost:${PORT}`);
+});
