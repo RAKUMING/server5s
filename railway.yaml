@@ -1,0 +1,9 @@
+services:
+  api:
+    build:
+      context: .
+    env:
+      - PORT=8000
+    startCommand: uvicorn main:app --host 0.0.0.0 --port 8000
+    routes:
+      - domain: your-custom-domain.railway.app
